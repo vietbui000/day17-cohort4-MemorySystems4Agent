@@ -1,9 +1,9 @@
-# Student Scaffold
+# Memory Systems Lab Implementation
 
-This `src/` folder is the student version of the lab.
+This `src/` folder contains the offline memory agents, benchmark and tests.
 
 - It keeps the same high-level structure
-- The Python files are intentionally incomplete and contain pseudocode / TODOs
+- Offline mode is deterministic and needs no API key. Provider model construction is available in `model_provider.py`; live agent execution is an optional extension.
 - The benchmark structure should include: standard benchmark + long-context stress benchmark
 - The runtime should support these providers: `openai`, `custom`, `gemini`, `anthropic`, `ollama`, `openrouter`
 

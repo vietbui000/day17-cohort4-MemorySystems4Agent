@@ -5,16 +5,7 @@ from dataclasses import dataclass
 
 @dataclass
 class ProviderConfig:
-    """Student TODO: define the provider configuration shared by the agents.
-
-    Required providers for this lab:
-    - openai
-    - custom (OpenAI-compatible base URL)
-    - gemini
-    - anthropic
-    - ollama
-    - openrouter
-    """
+    """Provider configuration shared by the agents."""
 
     provider: str
     model_name: str
@@ -24,21 +15,71 @@ class ProviderConfig:
 
 
 def normalize_provider(value: str) -> str:
-    """Student TODO: map aliases like `anthorpic` -> `anthropic`."""
+    provider = value.strip().lower()
 
-    raise NotImplementedError
+    aliases = {
+        "anthorpic": "anthropic",
+        "google": "gemini",
+        "google-genai": "gemini",
+        "openai-compatible": "custom",
+    }
+    provider = aliases.get(provider, provider)
+
+    supported = {
+        "openai",
+        "custom",
+        "gemini",
+        "anthropic",
+        "ollama",
+        "openrouter",
+    }
+
+    if provider not in supported:
+        raise ValueError(f"Provider không được hỗ trợ: {value!r}")
+
+    return provider
 
 
 def build_chat_model(config: ProviderConfig):
-    """Student TODO: instantiate the real chat model for the selected provider.
+    """Build a chat model lazily so the offline benchmark needs no SDK or key."""
+    provider = normalize_provider(config.provider)
+    common = {"model": config.model_name, "temperature": config.temperature}
 
-    Pseudocode:
-    - `openai` -> `ChatOpenAI`
-    - `custom` -> `ChatOpenAI` with `base_url`
-    - `gemini` -> `ChatGoogleGenerativeAI`
-    - `anthropic` -> `ChatAnthropic`
-    - `ollama` -> `ChatOllama`
-    - `openrouter` -> `ChatOpenRouter`
-    """
+    if provider in {"openai", "custom"}:
+        from langchain_openai import ChatOpenAI
 
-    raise NotImplementedError
+        if provider == "custom" and not config.base_url:
+            raise ValueError("CUSTOM_BASE_URL is required for custom provider")
+        return ChatOpenAI(
+            **common,
+            **({"api_key": config.api_key} if config.api_key else {}),
+            **({"base_url": config.base_url} if config.base_url else {}),
+        )
+    if provider == "gemini":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        return ChatGoogleGenerativeAI(
+            **common,
+            **({"google_api_key": config.api_key} if config.api_key else {}),
+        )
+    if provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(
+            **common,
+            **({"api_key": config.api_key} if config.api_key else {}),
+        )
+    if provider == "ollama":
+        from langchain_ollama import ChatOllama
+
+        return ChatOllama(
+            **common,
+            **({"base_url": config.base_url} if config.base_url else {}),
+        )
+
+    from langchain_openrouter import ChatOpenRouter
+
+    return ChatOpenRouter(
+        **common,
+        **({"api_key": config.api_key} if config.api_key else {}),
+    )
